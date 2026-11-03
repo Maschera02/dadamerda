@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<base target="_top">
 <meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Farflung</title>
+<link rel="icon" href="https://a.favicon.im/farflung.game?larger=true">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@600;700;800&display=swap" rel="stylesheet">
@@ -156,7 +159,11 @@ select.btn{
 .g.oggi{text-decoration:underline}
 .g.sel{background:var(--verde);border-color:var(--grigio)}
 .g:disabled{opacity:.3;cursor:default}
-#btnOk{--sh:var(--grigio);background:var(--verde);color:#fff;font-weight:800}
+#btnOk,#codiceOk{--sh:var(--grigio);background:var(--verde);color:#fff;font-weight:800}
+#accesso .titolo{margin-top:150px}
+#codiceInput{background:#fff;padding:0 14px;font-size:22px;letter-spacing:.08em;cursor:text}
+#codiceInput::placeholder{color:var(--grigio);opacity:1;letter-spacing:0}
+#codiceOk{margin-top:34px}
 
 /* ---------- avviso ---------- */
 .toast{
@@ -252,6 +259,13 @@ select.btn{
     <div class="schede" id="altriDati"></div>
   </section>
 
+  <!-- ================= CODICE DI ACCESSO ================= -->
+  <section class="view" id="accesso" aria-label="Codice di accesso">
+    <h1 class="titolo">CODICE</h1>
+    <input class="btn" id="codiceInput" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="CODICE DI ACCESSO" aria-label="Codice di accesso">
+    <button class="btn" id="codiceOk" type="button">OK</button>
+  </section>
+
   <!-- ================= TENDINA INSERISCI PARTITA ================= -->
   <div class="velo" id="velo"></div>
   <div class="tendina" id="tendina" role="dialog" aria-modal="true" aria-label="Inserisci partita">
@@ -281,8 +295,8 @@ select.btn{
 
   /* ===== CONFIGURAZIONE ===== */
   var CONFIG = {
-    funzioneInvio: 'inviaPartita',   // Code.gs: riceve { giocatore, link, data }
-    funzioneDati: 'getDati'          // Code.gs: restituisce tutte le partite del foglio DATABASE
+    // Indirizzo della web app di Apps Script (finisce con /exec). Lasciandolo vuoto la pagina mostra dati d'esempio.
+    urlApi: 'https://script.google.com/macros/s/AKfycbxQEfU1WmF48J0EwWwCmTIbh_tLLVkql2BwPoAF8ma7Vcq_5qRGlxFFmYoCDwatTm3HEg/exec'
   };
 
   /* I 5 profili: i nomi devono coincidere con "giocatoriValidi" di Code.gs */
@@ -327,19 +341,26 @@ select.btn{
     return out;
   }
 
-  /* Chiamata a Code.gs (con risposta finta se apri il file fuori da Apps Script) */
-  function gs(nome, arg) {
-    return new Promise(function (ok, ko) {
-      var run = window.google && google.script && google.script.run;
-      if (!run) {
-        console.warn('[anteprima] ' + nome, arg);
-        setTimeout(function () { ok(nome === CONFIG.funzioneDati ? esempio() : 'Partita inserita (anteprima)'); }, 400);
-        return;
-      }
-      var r = run.withSuccessHandler(ok).withFailureHandler(ko);
-      if (typeof r[nome] !== 'function') { ko(new Error('Funzione "' + nome + '" non trovata in Code.gs')); return; }
-      arg === undefined ? r[nome]() : r[nome](arg);
-    });
+  /* Comunicazione con Apps Script (Code.gs). Il corpo è testo semplice: così il browser non fa la richiesta preliminare CORS. */
+  function api(azione, extra) {
+    if (!CONFIG.urlApi) {
+      console.warn('[anteprima] ' + azione, extra);
+      return new Promise(function (ok) {
+        setTimeout(function () {
+          ok(azione === 'dati' ? { ok: true, dati: esempio() } : { ok: true, messaggio: 'Partita inserita (anteprima)' });
+        }, 400);
+      });
+    }
+    var codice = leggi('codice') || '';
+    var corpo = { azione: azione, codice: codice };
+    for (var k in extra) corpo[k] = extra[k];
+    return fetch(CONFIG.urlApi, { method: 'POST', body: JSON.stringify(corpo) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.codice) { richiediCodice(!!codice); throw new Error(j.errore || 'Codice di accesso richiesto'); }
+        if (!j || j.ok === false) throw new Error((j && j.errore) || 'Errore sconosciuto');
+        return j;
+      });
   }
 
   /* ===== navigazione ===== */
@@ -425,8 +446,8 @@ select.btn{
   }
 
   function caricaDati() {
-    return gs(CONFIG.funzioneDati)
-      .then(function (r) { DATI = Array.isArray(r) ? r : []; })
+    return api('dati')
+      .then(function (j) { DATI = Array.isArray(j.dati) ? j.dati : []; })
       .catch(function () { DATI = 'errore'; })
       .then(aggiornaTutto);
   }
@@ -740,8 +761,9 @@ select.btn{
     if (!messaggioValido(testo)) { avviso('Incolla il messaggio di Farflung con il link', 'err'); $('link').focus(); return; }
 
     btn.disabled = true; btn.textContent = 'INVIO...';
-    gs(CONFIG.funzioneInvio, { giocatore: profilo.nome, link: testo, data: dataSel })
-      .then(function (r) {
+    api('invia', { giocatore: profilo.nome, link: testo, data: dataSel })
+      .then(function (j) {
+        var r = j.messaggio;
         testo = ''; $('link').value = '';
         giorno = dataSel;
         chiudi();
@@ -750,10 +772,28 @@ select.btn{
       })
       .catch(function (err) {
         var msg = String(err && err.message ? err.message : err).replace(/^Error:\s*/, '');
+        if (err && err.name === 'TypeError') msg = 'Connessione non riuscita, riprova';
         avviso(msg.length > 140 ? msg.slice(0, 140) + '…' : msg, 'err');
       })
       .then(function () { btn.disabled = false; btn.textContent = 'OK'; });
   });
+
+  /* ===== codice di accesso ===== */
+  function richiediCodice(errato) {
+    chiudi();
+    vai('accesso');
+    $('codiceInput').value = '';
+    if (errato) avviso('Codice errato', 'err');
+    setTimeout(function () { $('codiceInput').focus(); }, 60);
+  }
+  $('codiceOk').addEventListener('click', function () {
+    var c = $('codiceInput').value.trim();
+    if (!c) return;
+    scrivi('codice', c);
+    vai('home');
+    caricaDati();
+  });
+  $('codiceInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('codiceOk').click(); });
 
   /* ===== avvio ===== */
   aggiornaAvatar();
