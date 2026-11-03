@@ -161,6 +161,15 @@ select.btn{
 .g:disabled{opacity:.3;cursor:default}
 #btnOk{--sh:var(--grigio);background:var(--verde);color:#fff;font-weight:800}
 
+/* ---------- caricamento ---------- */
+.attesa{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.82)}
+.attesa.visibile{display:flex}
+.attesa-box{display:flex;flex-direction:column;align-items:center;gap:20px;max-width:300px;padding:28px 30px 24px;text-align:center;background:var(--avorio);border:3px solid var(--grigio);box-shadow:8px 7px 0 var(--verde)}
+.attesa-box p{font:700 18px/1.2 var(--font);text-transform:uppercase}
+.spinner{width:46px;height:46px;border:6px solid rgba(67,67,67,.2);border-top-color:var(--grigio);border-radius:50%;animation:gira .9s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation-duration:2.5s}}
+
 /* ---------- avviso ---------- */
 .toast{
   position:absolute;top:22px;left:50%;transform:translate(-50%,-30px);z-index:20;opacity:0;visibility:hidden;
@@ -275,6 +284,10 @@ select.btn{
     <button class="btn" id="btnOk" type="button">OK</button>
   </div>
 
+  <div class="attesa" id="attesa" role="alertdialog" aria-modal="true" aria-live="assertive" aria-label="Caricamento in corso">
+    <div class="attesa-box"><div class="spinner" aria-hidden="true"></div><p id="attesaTesto">Invio in corso...</p></div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
@@ -342,11 +355,18 @@ select.btn{
     }
     var corpo = { azione: azione };
     for (var k in extra) corpo[k] = extra[k];
-    return fetch(CONFIG.urlApi, { method: 'POST', body: JSON.stringify(corpo) })
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 45000);
+    return fetch(CONFIG.urlApi, { method: 'POST', body: JSON.stringify(corpo), signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) { return r.json(); })
       .then(function (j) {
+        clearTimeout(timer);
         if (!j || j.ok === false) throw new Error((j && j.errore) || 'Errore sconosciuto');
         return j;
+      }, function (err) {
+        clearTimeout(timer);
+        if (err && err.name === 'AbortError') throw new Error('Il server non risponde, riprova tra poco');
+        throw err;
       });
   }
 
@@ -369,7 +389,7 @@ select.btn{
     t.textContent = testo;
     t.className = 'toast ' + (tipo || '') + ' visibile';
     clearTimeout(tTimer);
-    tTimer = setTimeout(function () { t.classList.remove('visibile'); }, 3200);
+    tTimer = setTimeout(function () { t.classList.remove('visibile'); }, 4000);
   }
 
   /* ===== profili ===== */
@@ -432,11 +452,22 @@ select.btn{
       .sort(function (a, b) { return b.km - a.km || b.n - a.n; });
   }
 
+  var ultimoAgg = 0;         // momento dell'ultimo aggiornamento dei dati
+  var invioInCorso = false;
   function caricaDati() {
     return api('dati')
-      .then(function (j) { DATI = Array.isArray(j.dati) ? j.dati : []; })
-      .catch(function () { DATI = 'errore'; })
+      .then(function (j) { DATI = Array.isArray(j.dati) ? j.dati : []; ultimoAgg = Date.now(); })
+      .catch(function () { if (!Array.isArray(DATI)) DATI = 'errore'; })   // se c'erano già dati li tengo
       .then(aggiornaTutto);
+  }
+  function mostraAttesa(testo) {
+    invioInCorso = true;
+    $('attesaTesto').textContent = testo;
+    $('attesa').classList.add('visibile');
+  }
+  function nascondiAttesa() {
+    invioInCorso = false;
+    $('attesa').classList.remove('visibile');
   }
   function aggiornaTutto() {
     disegnaPodio();
@@ -747,22 +778,38 @@ select.btn{
     }
     if (!messaggioValido(testo)) { avviso('Incolla il messaggio di Farflung con il link', 'err'); $('link').focus(); return; }
 
+    var esito = '';
     btn.disabled = true; btn.textContent = 'INVIO...';
+    mostraAttesa('Invio in corso...');
     api('invia', { giocatore: profilo.nome, link: testo, data: dataSel })
       .then(function (j) {
-        var r = j.messaggio;
+        esito = typeof j.messaggio === 'string' && j.messaggio ? j.messaggio : 'Partita inserita';
         testo = ''; $('link').value = '';
         giorno = dataSel;
+        if (Array.isArray(j.dati)) {                 // il server ha già rimandato i dati aggiornati
+          DATI = j.dati; ultimoAgg = Date.now(); aggiornaTutto();
+          return;
+        }
+        mostraAttesa('Aggiorno le classifiche...');
+        return caricaDati();
+      })
+      .then(function () {
         chiudi();
-        avviso(typeof r === 'string' && r ? r : 'Partita inserita', 'ok');
-        caricaDati();
+        nascondiAttesa();
+        avviso(esito, 'ok');
       })
       .catch(function (err) {
+        nascondiAttesa();
         var msg = String(err && err.message ? err.message : err).replace(/^Error:\s*/, '');
         if (err && err.name === 'TypeError') msg = 'Connessione non riuscita, riprova';
         avviso(msg.length > 140 ? msg.slice(0, 140) + '…' : msg, 'err');
       })
       .then(function () { btn.disabled = false; btn.textContent = 'OK'; });
+  });
+
+  /* Quando si torna sulla pagina (cambio scheda, telefono sbloccato) aggiorno i dati senza ricaricare */
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && !invioInCorso && Date.now() - ultimoAgg > 30000) caricaDati();
   });
 
   /* ===== avvio ===== */
