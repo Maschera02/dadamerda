@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Farflung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#72CE5B; --avorio:#FDF2D1; --grigio:#434343; --giallo:#FFBC00;
+  --rosso:#C71E1F; --viola:#C69ACC; --arancio:#E08A4D; --argento:#BCB9B1;
+  --font:'Jost','Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%}
+body{background:#fff;color:var(--grigio);font-family:var(--font);display:flex;justify-content:center}
+.app{position:relative;width:100%;max-width:430px;min-height:100vh;min-height:100dvh;overflow:hidden;background:#fff}
+
+/* ---------- viste ---------- */
+.view{display:none;flex-direction:column;min-height:100vh;min-height:100dvh;padding-bottom:74px}
+.view.attiva{display:flex}
+
+/* ---------- bottoni (stile Figma: bordo 3px, ombra piena 8/7px) ---------- */
+.btn{
+  display:flex;align-items:center;justify-content:center;
+  width:min(323px,calc(100% - 67px));height:54px;margin:0 auto;position:relative;left:-4px;
+  background:var(--avorio);border:3px solid var(--grigio);
+  box-shadow:8px 7px 0 var(--sh,var(--grigio));
+  font:600 24px/1 var(--font);color:var(--grigio);text-decoration:none;text-align:center;
+  cursor:pointer;transition:transform .08s,box-shadow .08s;border-radius:0;
+}
+.btn:active:not(:disabled){transform:translate(8px,7px);box-shadow:0 0 0 var(--sh,var(--grigio))}
+.btn:focus-visible{outline:3px solid var(--grigio);outline-offset:5px}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.scelto{transform:translate(8px,7px);box-shadow:0 0 0 var(--sh)}
+.btn.mini{width:auto;min-width:120px;height:40px;margin:0;left:0;font-size:18px;padding:0 16px}
+
+/* ---------- home ---------- */
+.avatar{display:flex;flex-direction:column;align-items:center;width:71px;margin:75px 18px 0 auto;padding:0;border:0;background:none;color:var(--grigio);cursor:pointer}
+.avatar:focus-visible{outline:3px solid var(--grigio);outline-offset:4px}
+.avatar svg{display:block;width:71px;height:71px}
+.avatar .nome-profilo{margin-top:6px;font:700 14px/1 var(--font);white-space:nowrap}
+#home .btn.farflung{margin-top:23px}
+#home .btn.partita{margin-top:44px}
+.zona-podio{flex:1;display:flex;align-items:flex-end;justify-content:center;padding-top:30px}
+.podio{display:flex;justify-content:center;align-items:flex-end;gap:36px;width:313px;height:256px;padding-bottom:7px;margin:0 auto 27px;position:relative;left:-3px}
+.col{width:78px;display:flex;flex-direction:column;align-items:center}
+.ico{display:block;width:54px;height:54px;margin-bottom:8px}
+.ico svg{display:block;width:100%;height:100%}
+.col .nome{font:700 13px/1 var(--font);margin-bottom:14px;max-width:110px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blocco{
+  width:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:6px 0 5px;background:var(--avorio);border:3px solid var(--grigio);box-shadow:7px 7px 0 var(--sh);
+}
+.blocco .pos{font:600 24px/1 var(--font)}
+.blocco .pt{font:700 13px/1 var(--font)}
+.col.p1 .blocco{height:143px;--sh:var(--giallo)}
+.col.p2 .blocco{height:98px;--sh:var(--argento)}
+.col.p3 .blocco{height:69px;--sh:var(--arancio)}
+
+/* ---------- viste secondarie ---------- */
+.barra{display:flex;align-items:center;padding:28px 18px 0 22px}
+.titolo{font:600 24px/1 var(--font);text-align:center;margin:38px 0 34px}
+.sottotitolo{font:600 22px/1 var(--font);text-align:center;margin:52px 0 22px}
+.sottotitolo.primo{margin-top:0}
+.lista{display:flex;flex-direction:column;gap:26px}
+.box{
+  width:min(323px,calc(100% - 67px));margin:0 auto;position:relative;left:-4px;
+  background:var(--avorio);border:3px solid var(--grigio);box-shadow:8px 7px 0 var(--grigio);
+}
+.vuoto{min-height:110px;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font:600 17px/1.3 var(--font)}
+
+/* ---------- classifiche ---------- */
+select.btn{
+  appearance:none;-webkit-appearance:none;text-align-last:center;font-size:20px;padding:0 40px 0 14px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' fill='none' stroke='%23434343' stroke-width='3'/></svg>");
+  background-repeat:no-repeat;background-position:right 14px center;
+}
+.lista-class{margin-top:30px}
+.nav-giorno{display:flex;align-items:center;justify-content:space-between;height:50px;padding:0 4px;margin-bottom:26px}
+.nav-giorno .freccia{width:46px;height:44px;font-size:26px}
+.nav-giorno .etichetta{font:700 18px/1 var(--font);text-align:center}
+.gr{padding:11px 14px 13px;border-bottom:2px solid rgba(67,67,67,.2)}
+.gr:last-child{border-bottom:0}
+.gr-testa{display:grid;grid-template-columns:26px 16px 1fr auto;align-items:center;gap:10px;margin-bottom:10px}
+.gr-testa .pos{font:700 19px/1 var(--font)}
+.gr-testa i{width:16px;height:16px;border:2px solid var(--grigio);border-radius:50%;background:var(--c)}
+.gr-testa .nome{font:600 19px/1 var(--font)}
+.gr-testa b{font:700 18px/1 var(--font)}
+.gr-cat{display:flex;gap:3px}
+.cat{flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:center;height:30px;padding:0 3px;border:2px solid var(--grigio);background:var(--k);font:700 11px/1 var(--font);letter-spacing:-.2px;white-space:nowrap;overflow:hidden}
+.riga{display:grid;grid-template-columns:26px 16px 1fr auto;align-items:center;gap:10px;min-height:54px;padding:6px 14px;border-bottom:2px solid rgba(67,67,67,.2)}
+.riga:last-child{border-bottom:0}
+.riga .pos{font:700 19px/1 var(--font)}
+.riga i{width:16px;height:16px;border:2px solid var(--grigio);border-radius:50%;background:var(--c)}
+.riga .nome{font:600 19px/1 var(--font)}
+.riga .dx{text-align:right}
+.riga .dx b{display:block;font:700 18px/1.1 var(--font)}
+.riga .dx small{display:block;font:600 12px/1.2 var(--font);opacity:.75}
+.riga.zero{opacity:.45}
+
+.seg{display:flex;width:min(323px,calc(100% - 67px));margin:0 auto 16px;position:relative;left:-4px}
+.seg button{flex:1;height:38px;border:3px solid var(--grigio);background:var(--avorio);font:600 16px/1 var(--font);color:var(--grigio);cursor:pointer}
+.seg button+button{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--grigio);color:var(--avorio)}
+.seg button:focus-visible,.chip:focus-visible{outline:3px solid var(--grigio);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:min(323px,calc(100% - 67px));margin:0 auto 20px;position:relative;left:-4px}
+.chip{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border:3px solid var(--grigio);background:var(--avorio);font:600 15px/1 var(--font);color:var(--grigio);cursor:pointer}
+.chip::before{content:'';width:12px;height:12px;border:2px solid var(--grigio);border-radius:50%;background:var(--c)}
+.chip[aria-pressed="true"]{background:var(--c)}
+.chip[aria-pressed="true"]::before{background:var(--avorio)}
+.grafico{padding:12px 8px 8px}
+.grafico svg{display:block;width:100%;height:auto}
+.grafico svg text{font-family:var(--font);font-weight:600;font-size:11px;fill:var(--grigio)}
+#home .btn.classifiche{margin-top:0}
+.btn.altri{--sh:var(--viola);margin-top:44px}
+
+/* ---------- altri dati ---------- */
+.schede{display:flex;flex-direction:column;gap:30px;margin-top:0}
+.scheda-testa{display:flex;align-items:center;gap:10px;padding:12px 14px 10px;font:700 20px/1 var(--font)}
+.scheda-testa i{width:18px;height:18px;border:2px solid var(--grigio);border-radius:50%;background:var(--c)}
+.dato{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 14px;border-top:2px solid rgba(67,67,67,.2);font:600 16px/1.2 var(--font)}
+.dato{flex-wrap:wrap;row-gap:4px}
+.dato span,.dato b{white-space:nowrap}
+.dato b{font-weight:700;text-align:right;margin-left:auto}
+.dato small{font:600 13px/1 var(--font);opacity:.75}
+
+/* ---------- tendina ---------- */
+.velo{position:absolute;inset:0;background:rgba(217,217,217,.65);opacity:0;visibility:hidden;transition:opacity .25s,visibility 0s .25s;z-index:10}
+.velo.aperto{opacity:1;visibility:visible;transition:opacity .25s}
+.tendina{
+  position:absolute;left:0;right:0;bottom:0;z-index:11;
+  background:var(--avorio);border:3px solid var(--grigio);border-bottom:0;
+  padding:22px 0 calc(34px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:20px;
+  transform:translateY(105%);visibility:hidden;transition:transform .28s ease,visibility 0s .28s;
+}
+.tendina.aperta{transform:none;visibility:visible;transition:transform .28s ease}
+.maniglia{width:100px;height:3px;background:var(--grigio);margin:0 auto -4px}
+#link{background:#fff;font-size:24px;line-height:48px;text-transform:uppercase;padding:0 14px;resize:none;overflow:hidden;white-space:nowrap;cursor:pointer}
+#link::placeholder{color:var(--grigio);opacity:1}
+#link:not(:placeholder-shown){font-size:16px;text-transform:none;font-weight:600}
+.cal{height:211px;padding:2px 8px 0;display:flex;flex-direction:column}
+.cal-testa{display:flex;align-items:center;justify-content:space-between;height:32px}
+.cal-testa .mese{font:700 17px/1 var(--font)}
+.freccia{width:32px;height:30px;border:0;background:none;font:700 22px/1 var(--font);color:var(--grigio);cursor:pointer}
+.freccia:disabled{opacity:.25;cursor:default}
+.freccia:focus-visible,.g:focus-visible{outline:2px solid var(--grigio);outline-offset:1px}
+.cal-sett,.cal-giorni{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-sett span{font:700 12px/20px var(--font);text-align:center}
+.cal-giorni{grid-auto-rows:25px}
+.g{border:2px solid transparent;background:none;font:600 15px/1 var(--font);color:var(--grigio);cursor:pointer;margin:0 1px}
+.g.oggi{text-decoration:underline}
+.g.sel{background:var(--verde);border-color:var(--grigio)}
+.g:disabled{opacity:.3;cursor:default}
+#btnOk{--sh:var(--grigio);background:var(--verde);color:#fff;font-weight:800}
+
+/* ---------- avviso ---------- */
+.toast{
+  position:absolute;top:22px;left:50%;transform:translate(-50%,-30px);z-index:20;opacity:0;visibility:hidden;
+  width:min(320px,calc(100% - 48px));padding:12px 14px;text-align:center;
+  background:var(--avorio);border:3px solid var(--grigio);box-shadow:6px 6px 0 var(--sh,var(--grigio));
+  font:600 16px/1.25 var(--font);transition:transform .25s ease,opacity .25s,visibility 0s .25s;pointer-events:none
+}
+.toast.visibile{transform:translate(-50%,0);opacity:1;visibility:visible;transition:transform .25s ease,opacity .25s}
+.toast.ok{--sh:var(--verde)}
+.toast.err{--sh:var(--rosso)}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= HOME ================= -->
+  <section class="view attiva" id="home" aria-label="Home">
+    <button class="avatar" id="btnProfilo" type="button" aria-label="Scegli il profilo">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <defs><clipPath id="tondo"><circle cx="32" cy="32" r="29"/></clipPath></defs>
+        <circle id="avatarFill" cx="32" cy="32" r="29.5" fill="#BCB9B1"/>
+        <g clip-path="url(#tondo)" fill="#FDF2D1">
+          <circle cx="32" cy="25" r="9"/>
+          <ellipse cx="32" cy="58" rx="19" ry="15"/>
+        </g>
+        <circle cx="32" cy="32" r="29.5" fill="none" stroke="#434343" stroke-width="5"/>
+      </svg>
+      <span class="nome-profilo" id="nomeProfilo">Scegli profilo</span>
+    </button>
+
+    <a class="btn farflung" style="--sh:var(--rosso)" id="btnFarflung" href="https://farflung.game" target="_blank" rel="noopener">FARFLUNG</a>
+    <button class="btn partita" style="--sh:var(--verde)" id="btnInserisci" type="button">INSERISCI PARTITA</button>
+
+    <div class="zona-podio">
+      <div class="podio" aria-label="Podio della classifica generale">
+        <div class="col p2"><span class="ico" id="ico2"></span><span class="nome" id="nome2">-</span><div class="blocco"><span class="pos">2</span><span class="pt" id="pt2">-</span></div></div>
+        <div class="col p1"><span class="ico" id="ico1"></span><span class="nome" id="nome1">-</span><div class="blocco"><span class="pos">1</span><span class="pt" id="pt1">-</span></div></div>
+        <div class="col p3"><span class="ico" id="ico3"></span><span class="nome" id="nome3">-</span><div class="blocco"><span class="pos">3</span><span class="pt" id="pt3">-</span></div></div>
+      </div>
+    </div>
+
+    <button class="btn classifiche" style="--sh:var(--giallo)" id="btnClassifiche" type="button">CLASSIFICHE</button>
+  </section>
+
+  <!-- ================= SCELTA PROFILO ================= -->
+  <section class="view" id="profili" aria-label="Scelta profilo">
+    <div class="barra"><button class="btn mini" type="button" data-vai="home">&#8249; HOME</button></div>
+    <h1 class="titolo">CHI SEI?</h1>
+    <div class="lista" id="listaProfili"></div>
+  </section>
+
+  <!-- ================= CLASSIFICHE ================= -->
+  <section class="view" id="classifiche" aria-label="Classifiche">
+    <div class="barra"><button class="btn mini" type="button" data-vai="home">&#8249; HOME</button></div>
+    <h1 class="titolo">CLASSIFICHE</h1>
+
+    <h2 class="sottotitolo primo">GIORNALIERA</h2>
+    <div class="box nav-giorno" id="navGiorno">
+      <button class="freccia" id="giornoPrec" type="button" aria-label="Giorno precedente">&#8249;</button>
+      <span class="etichetta" id="giornoEtichetta" aria-live="polite">-</span>
+      <button class="freccia" id="giornoSucc" type="button" aria-label="Giorno successivo">&#8250;</button>
+    </div>
+    <div class="box" id="listaGiorno" aria-live="polite"></div>
+
+    <h2 class="sottotitolo">GENERALE E MENSILE</h2>
+    <select class="btn" id="periodo" aria-label="Periodo della classifica">
+      <option value="tutto">Generale</option>
+    </select>
+    <div class="box lista-class" id="listaClass" aria-live="polite"></div>
+
+    <button class="btn altri" type="button" data-vai="altri">ALTRI DATI</button>
+  </section>
+
+  <!-- ================= ALTRI DATI ================= -->
+  <section class="view" id="altri" aria-label="Altri dati">
+    <div class="barra"><button class="btn mini" type="button" data-vai="classifiche">&#8249; INDIETRO</button></div>
+    <h1 class="titolo">ALTRI DATI</h1>
+
+    <h2 class="sottotitolo primo">ANDAMENTO</h2>
+    <div class="seg" id="modo" role="group" aria-label="Tipo di andamento">
+      <button type="button" data-modo="totale" aria-pressed="true">Km totali</button>
+      <button type="button" data-modo="media" aria-pressed="false">Media a partita</button>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Giocatori da mostrare"></div>
+    <div class="box grafico" id="grafico"></div>
+
+    <h2 class="sottotitolo">STATISTICHE</h2>
+    <div class="schede" id="altriDati"></div>
+  </section>
+
+  <!-- ================= TENDINA INSERISCI PARTITA ================= -->
+  <div class="velo" id="velo"></div>
+  <div class="tendina" id="tendina" role="dialog" aria-modal="true" aria-label="Inserisci partita">
+    <div class="maniglia"></div>
+
+    <textarea class="btn" id="link" rows="1" wrap="off" spellcheck="false" autocomplete="off" placeholder="INCOLLA LINK" aria-label="Incolla il messaggio di Farflung con il link"></textarea>
+
+    <div class="box cal" aria-label="Giorno del test">
+      <div class="cal-testa">
+        <button class="freccia" id="mesePrec" type="button" aria-label="Mese precedente">&#8249;</button>
+        <span class="mese" id="titoloMese" aria-live="polite"></span>
+        <button class="freccia" id="meseSucc" type="button" aria-label="Mese successivo">&#8250;</button>
+      </div>
+      <div class="cal-sett" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="cal-giorni" id="giorni"></div>
+    </div>
+
+    <button class="btn" id="btnOk" type="button">OK</button>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ===== CONFIGURAZIONE ===== */
+  var CONFIG = {
+    funzioneInvio: 'inviaPartita',   // Code.gs: riceve { giocatore, link, data }
+    funzioneDati: 'getDati'          // Code.gs: restituisce tutte le partite del foglio DATABASE
+  };
+
+  /* I 5 profili: i nomi devono coincidere con "giocatoriValidi" di Code.gs */
+  var PROFILI = [
+    { id: 'Angelo',   nome: 'Angelo',   colore: '#72CE5B' },   // verde
+    { id: 'Dada',     nome: 'Dada',     colore: '#E08A4D' },   // arancione
+    { id: 'Denzo',    nome: 'Denzo',    colore: '#C69ACC' },   // viola
+    { id: 'Maschera', nome: 'Maschera', colore: '#FFBC00' },   // giallo
+    { id: 'Mene',     nome: 'Mene',     colore: '#5AA9E6' }    // blu
+  ];
+
+  var MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+  /* ===== utilità ===== */
+  function $(id) { return document.getElementById(id); }
+  var mem = {};
+  function leggi(k) { try { return localStorage.getItem('ff_' + k); } catch (e) { return mem[k] || null; } }
+  function scrivi(k, v) { try { localStorage.setItem('ff_' + k, v); } catch (e) { mem[k] = v; } }
+  function due(n) { return (n < 10 ? '0' : '') + n; }
+  function iso(y, m, d) { return y + '-' + due(m + 1) + '-' + due(d); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function giornoNum(d) { var a = d.split('-'); return Date.UTC(+a[0], +a[1] - 1, +a[2]) / 86400000; }
+  function fmtNum(n) { return String(Math.round(n * 10) / 10).replace('.', ','); }
+
+  /* Esempio di dati per vedere la pagina fuori da Apps Script */
+  function esempio() {
+    var cats = ['Miss','Common','Uncommon','Rare','Elusive','Farflung'];
+    var km = { Miss: 0, Common: 40, Uncommon: 55, Rare: 70, Elusive: 85, Farflung: 100 };
+    var out = [], seed = 7, oggiD = new Date();
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    for (var g = 40; g >= 0; g--) {
+      var d = new Date(oggiD.getTime() - g * 86400000);
+      var ds = iso(d.getFullYear(), d.getMonth(), d.getDate());
+      PROFILI.forEach(function (p) {
+        if (rnd() < 0.7) {
+          var c = [], t = 0;
+          for (var i = 0; i < 5; i++) { var k = cats[Math.floor(rnd() * 6)]; c.push(k); t += km[k]; }
+          out.push({ d: ds, g: p.nome, c: c, t: t });
+        }
+      });
+    }
+    return out;
+  }
+
+  /* Chiamata a Code.gs (con risposta finta se apri il file fuori da Apps Script) */
+  function gs(nome, arg) {
+    return new Promise(function (ok, ko) {
+      var run = window.google && google.script && google.script.run;
+      if (!run) {
+        console.warn('[anteprima] ' + nome, arg);
+        setTimeout(function () { ok(nome === CONFIG.funzioneDati ? esempio() : 'Partita inserita (anteprima)'); }, 400);
+        return;
+      }
+      var r = run.withSuccessHandler(ok).withFailureHandler(ko);
+      if (typeof r[nome] !== 'function') { ko(new Error('Funzione "' + nome + '" non trovata in Code.gs')); return; }
+      arg === undefined ? r[nome]() : r[nome](arg);
+    });
+  }
+
+  /* ===== navigazione ===== */
+  function vai(id) {
+    var viste = document.querySelectorAll('.view');
+    for (var i = 0; i < viste.length; i++) viste[i].classList.toggle('attiva', viste[i].id === id);
+    window.scrollTo(0, 0);
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-vai]');
+    if (t) vai(t.getAttribute('data-vai'));
+  });
+  $('btnClassifiche').addEventListener('click', function () { vai('classifiche'); });
+
+  /* ===== avviso ===== */
+  var tTimer;
+  function avviso(testo, tipo) {
+    var t = $('toast');
+    t.textContent = testo;
+    t.className = 'toast ' + (tipo || '') + ' visibile';
+    clearTimeout(tTimer);
+    tTimer = setTimeout(function () { t.classList.remove('visibile'); }, 3200);
+  }
+
+  /* ===== profili ===== */
+  var profilo = null;
+  (function () {
+    var salvato = leggi('profilo');
+    for (var i = 0; i < PROFILI.length; i++) if (PROFILI[i].id === salvato) profilo = PROFILI[i];
+  })();
+
+  var COLORE_NEUTRO = '#BCB9B1';   // nessun profilo scelto
+  function iconaSvg(colore, id) {
+    return '<svg viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="' + id + '"><circle cx="32" cy="32" r="29"/></clipPath></defs>' +
+      '<circle cx="32" cy="32" r="29.5" fill="' + colore + '"/>' +
+      '<g clip-path="url(#' + id + ')" fill="#FDF2D1"><circle cx="32" cy="25" r="9"/><ellipse cx="32" cy="58" rx="19" ry="15"/></g>' +
+      '<circle cx="32" cy="32" r="29.5" fill="none" stroke="#434343" stroke-width="5"/></svg>';
+  }
+  function aggiornaAvatar() {
+    $('avatarFill').setAttribute('fill', profilo ? profilo.colore : COLORE_NEUTRO);
+    $('nomeProfilo').textContent = profilo ? profilo.nome : 'Scegli profilo';
+    $('btnProfilo').setAttribute('aria-label', profilo ? 'Profilo: ' + profilo.nome + ' (cambia)' : 'Scegli il profilo');
+  }
+
+  function disegnaProfili() {
+    $('listaProfili').innerHTML = PROFILI.map(function (p) {
+      var sel = profilo && profilo.id === p.id;
+      return '<button type="button" class="btn' + (sel ? ' scelto' : '') + '" data-id="' + p.id +
+             '" style="--sh:' + p.colore + '" aria-pressed="' + !!sel + '">' + esc(p.nome) + '</button>';
+    }).join('');
+  }
+  $('listaProfili').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-id]');
+    if (!b) return;
+    for (var i = 0; i < PROFILI.length; i++) if (PROFILI[i].id === b.getAttribute('data-id')) profilo = PROFILI[i];
+    scrivi('profilo', profilo.id);
+    aggiornaAvatar();
+    disegnaProfili();
+    avviso('Profilo: ' + profilo.nome, 'ok');
+    setTimeout(function () { vai('home'); }, 450);
+  });
+  $('btnProfilo').addEventListener('click', function () { disegnaProfili(); vai('profili'); });
+
+  /* ===== dati ===== */
+  var DATI = null;            // null = in caricamento, 'errore', oppure array di partite
+  var periodo = 'tutto';      // 'tutto' oppure 'AAAA-MM'
+  var modo = 'totale';        // andamento: 'totale' | 'media'
+  var visibili = {};
+  PROFILI.forEach(function (p) { visibili[p.id] = true; });
+
+  function filtra(righe, per) {
+    return per === 'tutto' ? righe : righe.filter(function (r) { return r.d.slice(0, 7) === per; });
+  }
+  function etichettaMese(ym) { var a = ym.split('-'); return MESI[+a[1] - 1] + ' ' + a[0]; }
+
+  /* Classifica = somma dei km di tutte le partite del periodo */
+  function classifica(righe) {
+    var m = {};
+    PROFILI.forEach(function (p) { m[p.nome] = { p: p, km: 0, n: 0 }; });
+    righe.forEach(function (r) { if (m[r.g]) { m[r.g].km += r.t; m[r.g].n++; } });
+    return PROFILI.map(function (p) { return m[p.nome]; })
+      .sort(function (a, b) { return b.km - a.km || b.n - a.n; });
+  }
+
+  function caricaDati() {
+    return gs(CONFIG.funzioneDati)
+      .then(function (r) { DATI = Array.isArray(r) ? r : []; })
+      .catch(function () { DATI = 'errore'; })
+      .then(aggiornaTutto);
+  }
+  function aggiornaTutto() {
+    disegnaPodio();
+    disegnaGiorno();
+    if (Array.isArray(DATI)) disegnaPeriodi();
+    disegnaClassifica();
+    disegnaChips();
+    disegnaGrafico();
+    disegnaAltri();
+  }
+  function stato(el, testo) { el.innerHTML = '<div class="vuoto">' + testo + '</div>'; }
+  var ERRORE = 'Non riesco a leggere i dati dal foglio.';
+
+  /* ----- podio (classifica generale) ----- */
+  function disegnaPodio() {
+    var c = Array.isArray(DATI) ? classifica(DATI) : [];
+    for (var i = 1; i <= 3; i++) {
+      var r = c[i - 1] && c[i - 1].n ? c[i - 1] : null;
+      $('ico' + i).innerHTML = iconaSvg(r ? r.p.colore : COLORE_NEUTRO, 'ip' + i);
+      $('nome' + i).textContent = r ? r.p.nome : '-';
+      $('pt' + i).textContent = r ? r.km : '-';
+    }
+  }
+
+  /* ----- classifica del giorno ----- */
+  var giorno = null;   // giorno mostrato, formato AAAA-MM-GG
+  var COL_CAT = { Miss: '#BCB9B1', Common: '#FFFFFF', Uncommon: '#72CE5B', Rare: '#5AA9E6', Elusive: '#C69ACC', Farflung: '#FFBC00' };
+  var KM_CAT = { Miss: 0, Common: 40, Uncommon: 55, Rare: 70, Elusive: 85, Farflung: 100 };
+
+  function giorniConDati() {
+    var g = [];
+    DATI.forEach(function (r) { if (g.indexOf(r.d) < 0) g.push(r.d); });
+    return g.sort();
+  }
+  function etichettaGiorno(d) {
+    var a = d.split('-'), n = giornoNum(d), o = giornoNum(oggi);
+    var t = (+a[2]) + ' ' + MESI[+a[1] - 1].toLowerCase();
+    if (n === o) return 'Oggi, ' + t;
+    if (n === o - 1) return 'Ieri, ' + t;
+    return t + ' ' + a[0];
+  }
+  function disegnaGiorno() {
+    var box = $('listaGiorno'), et = $('giornoEtichetta'), pr = $('giornoPrec'), su = $('giornoSucc');
+    pr.disabled = true; su.disabled = true;
+    if (DATI === null) { et.textContent = '-'; return stato(box, 'Caricamento...'); }
+    if (DATI === 'errore') { et.textContent = '-'; return stato(box, ERRORE); }
+    var giorni = giorniConDati();
+    if (!giorni.length) { et.textContent = '-'; return stato(box, 'Ancora nessuna partita.'); }
+    if (giorni.indexOf(giorno) < 0) giorno = giorni[giorni.length - 1];   // di default l'ultimo giorno con partite
+    var i = giorni.indexOf(giorno);
+    et.textContent = etichettaGiorno(giorno);
+    pr.disabled = i === 0;
+    su.disabled = i === giorni.length - 1;
+
+    var colori = {};
+    PROFILI.forEach(function (p) { colori[p.nome] = p.colore; });
+    var righe = DATI.filter(function (r) { return r.d === giorno && colori[r.g]; })
+      .sort(function (a, b) { return b.t - a.t; });
+    box.innerHTML = righe.map(function (r, k) {
+      var tile = (r.c || []).map(function (c, q) {
+        var n = String(c); n = n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
+        return '<span class="cat" style="--k:' + (COL_CAT[n] || COL_CAT.Miss) + '" title="' + esc(n) + ' (' + (KM_CAT[n] || 0) + ' km)" aria-label="Domanda ' + (q + 1) + ': ' + esc(n) + '">' + esc(n) + '</span>';
+      }).join('');
+      return '<div class="gr" style="--c:' + colori[r.g] + '"><div class="gr-testa"><span class="pos">' + (k + 1) + '</span><i></i><span class="nome">' +
+        esc(r.g) + '</span><b>' + r.t + ' km</b></div><div class="gr-cat">' + tile + '</div></div>';
+    }).join('');
+  }
+  $('giornoPrec').addEventListener('click', function () {
+    var g = giorniConDati(), i = g.indexOf(giorno);
+    if (i > 0) { giorno = g[i - 1]; disegnaGiorno(); }
+  });
+  $('giornoSucc').addEventListener('click', function () {
+    var g = giorniConDati(), i = g.indexOf(giorno);
+    if (i >= 0 && i < g.length - 1) { giorno = g[i + 1]; disegnaGiorno(); }
+  });
+
+  /* ----- classifica con filtro mensile ----- */
+  function disegnaPeriodi() {
+    var mesi = [];
+    DATI.forEach(function (r) { var m = r.d.slice(0, 7); if (mesi.indexOf(m) < 0) mesi.push(m); });
+    mesi.sort().reverse();
+    if (periodo !== 'tutto' && mesi.indexOf(periodo) < 0) periodo = 'tutto';
+    $('periodo').innerHTML = '<option value="tutto">Generale</option>' +
+      mesi.map(function (m) { return '<option value="' + m + '">' + etichettaMese(m) + '</option>'; }).join('');
+    $('periodo').value = periodo;
+  }
+  $('periodo').addEventListener('change', function () { periodo = this.value; disegnaClassifica(); });
+
+  function disegnaClassifica() {
+    var box = $('listaClass');
+    if (DATI === null) return stato(box, 'Caricamento...');
+    if (DATI === 'errore') return stato(box, ERRORE);
+    var c = classifica(filtra(DATI, periodo));
+    if (!c.some(function (x) { return x.n; })) return stato(box, 'Nessuna partita in questo periodo.');
+    box.innerHTML = c.map(function (x, i) {
+      return '<div class="riga' + (x.n ? '' : ' zero') + '" style="--c:' + x.p.colore + '">' +
+        '<span class="pos">' + (i + 1) + '</span><i></i><span class="nome">' + esc(x.p.nome) + '</span>' +
+        '<span class="dx"><b>' + x.km + ' km</b><small>' + x.n + (x.n === 1 ? ' partita' : ' partite') + '</small></span></div>';
+    }).join('');
+  }
+
+  /* ----- andamento ----- */
+  function disegnaChips() {
+    $('chips').innerHTML = PROFILI.map(function (p) {
+      return '<button type="button" class="chip" data-id="' + p.id + '" style="--c:' + p.colore +
+             '" aria-pressed="' + !!visibili[p.id] + '">' + esc(p.nome) + '</button>';
+    }).join('');
+  }
+  $('chips').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-id]');
+    if (!b) return;
+    visibili[b.getAttribute('data-id')] = !visibili[b.getAttribute('data-id')];
+    disegnaChips();
+    disegnaGrafico();
+  });
+  $('modo').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-modo]');
+    if (!b) return;
+    modo = b.getAttribute('data-modo');
+    var bs = $('modo').querySelectorAll('button');
+    for (var i = 0; i < bs.length; i++) bs[i].setAttribute('aria-pressed', bs[i] === b ? 'true' : 'false');
+    disegnaGrafico();
+  });
+
+  function serie(p) {
+    var per = {};
+    DATI.forEach(function (r) {
+      if (r.g !== p.nome) return;
+      var o = per[r.d] || (per[r.d] = { km: 0, n: 0 });
+      o.km += r.t; o.n++;
+    });
+    var cum = 0, n = 0, pts = [];
+    Object.keys(per).sort().forEach(function (d) {
+      cum += per[d].km; n += per[d].n;
+      pts.push({ x: giornoNum(d), y: modo === 'totale' ? cum : cum / n });
+    });
+    return pts;
+  }
+  function scalaY(max) {
+    if (max <= 0) return { max: 4, step: 1 };
+    var raw = max / 4, pot = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), f = raw / pot;
+    var s = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10, step = s * pot;
+    return { max: Math.ceil(max / step) * step, step: step };
+  }
+  function ddmm(x) { var d = new Date(x * 86400000); return due(d.getUTCDate()) + '/' + due(d.getUTCMonth() + 1); }
+
+  function disegnaGrafico() {
+    var box = $('grafico');
+    if (DATI === null) return stato(box, 'Caricamento...');
+    if (DATI === 'errore') return stato(box, ERRORE);
+    if (!DATI.length) return stato(box, 'Ancora nessuna partita.');
+    var scelti = PROFILI.filter(function (p) { return visibili[p.id]; });
+    if (!scelti.length) return stato(box, 'Scegli almeno un giocatore.');
+
+    var W = 340, H = 230, ml = 44, mr = 14, mt = 12, mb = 30;
+    var tutti = DATI.map(function (r) { return giornoNum(r.d); });
+    var x0 = Math.min.apply(null, tutti), x1 = Math.max.apply(null, tutti);
+    if (x0 === x1) { x0 -= 1; x1 += 1; }
+    var dati = scelti.map(function (p) { return { p: p, pts: serie(p) }; });
+    var maxY = 0;
+    dati.forEach(function (s) { s.pts.forEach(function (pt) { if (pt.y > maxY) maxY = pt.y; }); });
+    var sc = scalaY(maxY);
+    function X(x) { return ml + (x - x0) / (x1 - x0) * (W - ml - mr); }
+    function Y(y) { return mt + (1 - y / sc.max) * (H - mt - mb); }
+
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Andamento ' +
+      (modo === 'totale' ? 'dei km totali' : 'della media a partita') + ': ' +
+      dati.map(function (d) { var l = d.pts[d.pts.length - 1]; return d.p.nome + ' ' + (l ? fmtNum(l.y) : '0'); }).join(', ') + '">';
+    for (var v = 0; v <= sc.max + 0.0001; v += sc.step) {
+      s += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="#434343" stroke-opacity="' + (v === 0 ? '.8' : '.15') + '" stroke-width="' + (v === 0 ? 2 : 1) + '"/>';
+      s += '<text x="' + (ml - 6) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + fmtNum(v) + '</text>';
+    }
+    var nt = Math.min(4, Math.round(x1 - x0) + 1), visti = {};
+    for (var i = 0; i < nt; i++) {
+      var xv = Math.round(x0 + i * (x1 - x0) / (nt - 1 || 1)), lab = ddmm(xv);
+      if (visti[lab]) continue; visti[lab] = 1;
+      s += '<text x="' + X(xv) + '" y="' + (H - 8) + '" text-anchor="' + (i === 0 ? 'start' : i === nt - 1 ? 'end' : 'middle') + '">' + lab + '</text>';
+    }
+    dati.forEach(function (d) {
+      var pts = d.pts.map(function (q) { return X(q.x).toFixed(1) + ',' + Y(q.y).toFixed(1); }).join(' ');
+      if (d.pts.length > 1) {
+        s += '<polyline points="' + pts + '" fill="none" stroke="#434343" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>';
+        s += '<polyline points="' + pts + '" fill="none" stroke="' + d.p.colore + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+      }
+      d.pts.forEach(function (q) {
+        s += '<circle cx="' + X(q.x).toFixed(1) + '" cy="' + Y(q.y).toFixed(1) + '" r="' + (d.pts.length > 14 ? 2.5 : 4) + '" fill="' + d.p.colore + '" stroke="#434343" stroke-width="2"/>';
+      });
+    });
+    box.innerHTML = s + '</svg>';
+  }
+
+  /* ----- altri dati ----- */
+  var ORDINE_CAT = ['Farflung', 'Elusive', 'Rare', 'Uncommon', 'Common'];
+  function statistiche(nome) {
+    var righe = DATI.filter(function (r) { return r.g === nome; });
+    var giorni = [];
+    righe.forEach(function (r) { if (giorni.indexOf(r.d) < 0) giorni.push(r.d); });
+    var nums = giorni.sort().map(giornoNum), record = 0, run = 0, prev = null;
+    nums.forEach(function (n) {
+      run = (prev !== null && n === prev + 1) ? run + 1 : 1;
+      if (run > record) record = run;
+      prev = n;
+    });
+    var oggiN = giornoNum(iso(adesso.getFullYear(), adesso.getMonth(), adesso.getDate()));
+    var attuale = nums.length && oggiN - nums[nums.length - 1] <= 1 ? run : 0;
+    var cat = {};
+    righe.forEach(function (r) {
+      (r.c || []).forEach(function (c) { c = String(c); if (c && c !== 'Miss') cat[c] = (cat[c] || 0) + 1; });
+    });
+    var best = null;
+    ORDINE_CAT.forEach(function (c) { if (cat[c] && (!best || cat[c] > cat[best])) best = c; });
+    return { n: righe.length, attuale: attuale, record: record, cat: best, volte: best ? cat[best] : 0 };
+  }
+  function giorniTxt(n) { return n + (n === 1 ? ' giorno' : ' giorni'); }
+  function disegnaAltri() {
+    var box = $('altriDati');
+    if (DATI === null) return stato(box, 'Caricamento...');
+    if (DATI === 'errore') return stato(box, ERRORE);
+    var h = '<div class="box"><div class="dato" style="border-top:0"><span>Partite totali del gruppo</span><b>' + DATI.length + '</b></div></div>';
+    PROFILI.forEach(function (p) {
+      var st = statistiche(p.nome);
+      h += '<div class="box" style="--c:' + p.colore + '"><div class="scheda-testa"><i></i>' + esc(p.nome) + '</div>' +
+        '<div class="dato"><span>Partite giocate</span><b>' + st.n + '</b></div>' +
+        '<div class="dato"><span>Streak</span><b>' + giorniTxt(st.attuale) + ' <small>(record ' + st.record + ')</small></b></div>' +
+        '<div class="dato"><span>Più indovinata</span><b>' + (st.cat ? st.cat + ' <small>(' + st.volte + (st.volte === 1 ? ' volta' : ' volte') + ')</small>' : '-') + '</b></div></div>';
+    });
+    box.innerHTML = h;
+  }
+
+  /* ===== calendario ===== */
+  var adesso = new Date();
+  var oggi = iso(adesso.getFullYear(), adesso.getMonth(), adesso.getDate());
+  var dataSel = oggi;
+  var vistaY = adesso.getFullYear(), vistaM = adesso.getMonth();
+
+  function disegnaCal() {
+    $('titoloMese').textContent = MESI[vistaM] + ' ' + vistaY;
+    var primo = (new Date(vistaY, vistaM, 1).getDay() + 6) % 7;      // lunedì = 0
+    var n = new Date(vistaY, vistaM + 1, 0).getDate();
+    var h = '';
+    for (var i = 0; i < primo; i++) h += '<span></span>';
+    for (var d = 1; d <= n; d++) {
+      var s = iso(vistaY, vistaM, d);
+      h += '<button type="button" class="g' + (s === dataSel ? ' sel' : '') + (s === oggi ? ' oggi' : '') +
+           '" data-d="' + s + '"' + (s > oggi ? ' disabled' : '') + (s === dataSel ? ' aria-pressed="true"' : '') + '>' + d + '</button>';
+    }
+    $('giorni').innerHTML = h;
+    $('meseSucc').disabled = vistaY * 12 + vistaM >= adesso.getFullYear() * 12 + adesso.getMonth();
+  }
+  $('giorni').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-d]');
+    if (!b || b.disabled) return;
+    dataSel = b.getAttribute('data-d');
+    disegnaCal();
+  });
+  $('mesePrec').addEventListener('click', function () { vistaM--; if (vistaM < 0) { vistaM = 11; vistaY--; } disegnaCal(); });
+  $('meseSucc').addEventListener('click', function () { vistaM++; if (vistaM > 11) { vistaM = 0; vistaY++; } disegnaCal(); });
+
+  /* ===== tendina ===== */
+  var ultimoFocus = null;
+  function apri() {
+    ultimoFocus = document.activeElement;
+    dataSel = oggi; vistaY = adesso.getFullYear(); vistaM = adesso.getMonth();
+    disegnaCal();
+    $('velo').classList.add('aperto');
+    $('tendina').classList.add('aperta');
+    setTimeout(function () { $('btnOk').focus({ preventScroll: true }); }, 300);
+  }
+  function chiudi() {
+    $('velo').classList.remove('aperto');
+    $('tendina').classList.remove('aperta');
+    if (ultimoFocus && ultimoFocus.focus) ultimoFocus.focus({ preventScroll: true });
+  }
+  $('btnInserisci').addEventListener('click', apri);
+  $('velo').addEventListener('click', chiudi);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') chiudi(); });
+
+  /* "Incolla link": il testo copiato da Farflung è un messaggio con titolo, categorie e link.
+     Lo conservo intero (Code.gs lo analizza) e nel campo mostro solo un riassunto. */
+  var testo = '';
+  function messaggioValido(t) { return /farflung\.game\/s\/[a-zA-Z0-9]+/i.test(t); }
+  function impostaTesto(t) {
+    testo = (t || '').trim();
+    var m = testo.match(/Farflung\s*#\d+\s*[·•]\s*\d+\s*\/\s*500\s*km/i);
+    $('link').value = m ? m[0] : testo.replace(/\s+/g, ' ').slice(0, 40);
+  }
+  $('link').addEventListener('paste', function (e) {
+    var cb = e.clipboardData || window.clipboardData;
+    if (!cb) return;
+    e.preventDefault();
+    impostaTesto(cb.getData('text'));
+  });
+  $('link').addEventListener('input', function () { testo = this.value; });   // digitazione manuale
+  $('link').addEventListener('click', function () {
+    if (testo || !navigator.clipboard || !navigator.clipboard.readText) return;
+    navigator.clipboard.readText().then(function (t) {
+      if (messaggioValido(t || '')) impostaTesto(t);
+    }).catch(function () { /* permesso negato */ });
+  });
+
+  /* ===== invio a Code.gs ===== */
+  $('btnOk').addEventListener('click', function () {
+    var btn = this;
+    if (!profilo) {
+      chiudi(); disegnaProfili(); vai('profili');
+      avviso('Scegli prima il tuo profilo', 'err');
+      return;
+    }
+    if (!messaggioValido(testo)) { avviso('Incolla il messaggio di Farflung con il link', 'err'); $('link').focus(); return; }
+
+    btn.disabled = true; btn.textContent = 'INVIO...';
+    gs(CONFIG.funzioneInvio, { giocatore: profilo.nome, link: testo, data: dataSel })
+      .then(function (r) {
+        testo = ''; $('link').value = '';
+        giorno = dataSel;
+        chiudi();
+        avviso(typeof r === 'string' && r ? r : 'Partita inserita', 'ok');
+        caricaDati();
+      })
+      .catch(function (err) {
+        var msg = String(err && err.message ? err.message : err).replace(/^Error:\s*/, '');
+        avviso(msg.length > 140 ? msg.slice(0, 140) + '…' : msg, 'err');
+      })
+      .then(function () { btn.disabled = false; btn.textContent = 'OK'; });
+  });
+
+  /* ===== avvio ===== */
+  aggiornaAvatar();
+  aggiornaTutto();
+  caricaDati();
+})();
+</script>
+</body>
+</html>
