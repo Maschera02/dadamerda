@@ -159,7 +159,20 @@ select.btn{
 .g.oggi{text-decoration:underline}
 .g.sel{background:var(--verde);border-color:var(--grigio)}
 .g:disabled{opacity:.3;cursor:default}
-#btnOk{--sh:var(--grigio);background:var(--verde);color:#fff;font-weight:800}
+#btnOk,#btnAggiungi{--sh:var(--grigio);background:var(--verde);color:#fff;font-weight:800}
+.btn[hidden]{display:none}
+.btn.nuovo{--sh:var(--grigio);background:#fff;font-size:20px;margin-top:34px}
+.btn.da-eliminare{--sh:var(--rosso)}
+.btn.da-eliminare::before{content:'\2715';position:absolute;left:16px;font-size:20px;color:var(--rosso)}
+.conferma{padding:0 26px;text-align:center}
+.conferma h2{font:700 22px/1.2 var(--font)}
+.conferma p{margin-top:10px;font:600 16px/1.35 var(--font)}
+#btnEliminaOk{--sh:var(--grigio);background:var(--rosso);color:#fff;font-weight:800}
+#nomeNuovo{background:#fff;font-size:22px;padding:0 14px;cursor:text}
+#nomeNuovo::placeholder{color:var(--grigio);opacity:1}
+.anteprima{display:flex;align-items:center;gap:16px;padding:12px 16px;font:600 17px/1.25 var(--font)}
+.ico-anteprima{flex:none;width:52px;height:52px}
+.ico-anteprima svg{display:block;width:100%;height:100%}
 
 /* ---------- caricamento ---------- */
 .attesa{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.82)}
@@ -221,8 +234,10 @@ select.btn{
   <!-- ================= SCELTA PROFILO ================= -->
   <section class="view" id="profili" aria-label="Scelta profilo">
     <div class="barra"><button class="btn mini" type="button" data-vai="home">&#8249; HOME</button></div>
-    <h1 class="titolo">CHI SEI?</h1>
+    <h1 class="titolo" id="titoloProfili">CHI SEI?</h1>
     <div class="lista" id="listaProfili"></div>
+    <button class="btn nuovo" id="btnNuovoGiocatore" type="button">+ NUOVO GIOCATORE</button>
+    <button class="btn nuovo" id="btnEsciElimina" type="button" hidden>ESCI DA ELIMINA</button>
   </section>
 
   <!-- ================= CLASSIFICHE ================= -->
@@ -282,6 +297,23 @@ select.btn{
     </div>
 
     <button class="btn" id="btnOk" type="button">OK</button>
+  </div>
+
+  <div class="tendina" id="tendinaGiocatore" role="dialog" aria-modal="true" aria-label="Nuovo giocatore">
+    <div class="maniglia"></div>
+    <input class="btn" id="nomeNuovo" type="text" maxlength="16" autocomplete="off" spellcheck="false" placeholder="NOME DEL GIOCATORE" aria-label="Nome del nuovo giocatore">
+    <div class="box anteprima"><span class="ico-anteprima" id="icoNuovo"></span><span>Colore scelto in automatico</span></div>
+    <button class="btn" id="btnAggiungi" type="button">AGGIUNGI</button>
+  </div>
+
+  <div class="tendina" id="tendinaElimina" role="dialog" aria-modal="true" aria-label="Elimina giocatore">
+    <div class="maniglia"></div>
+    <div class="conferma">
+      <h2 id="titoloElimina">Eliminare il giocatore?</h2>
+      <p>Sparirà da profili, classifiche e grafici. Le sue partite restano nel foglio: se lo riaggiungi con lo stesso nome tornano visibili.</p>
+    </div>
+    <button class="btn" id="btnEliminaOk" type="button">ELIMINA</button>
+    <button class="btn" id="btnEliminaNo" type="button">ANNULLA</button>
   </div>
 
   <div class="attesa" id="attesa" role="alertdialog" aria-modal="true" aria-live="assertive" aria-label="Caricamento in corso">
@@ -344,14 +376,22 @@ select.btn{
   }
 
   /* Comunicazione con Apps Script (Code.gs). Il corpo è testo semplice: così il browser non fa la richiesta preliminare CORS. */
+  var mockG = null;
   function api(azione, extra) {
     if (!CONFIG.urlApi) {
       console.warn('[anteprima] ' + azione, extra);
       return new Promise(function (ok) {
         setTimeout(function () {
-          ok(azione === 'dati' ? { ok: true, dati: esempio() } : { ok: true, messaggio: 'Partita inserita (anteprima)' });
+          if (!mockG) mockG = PROFILI.map(function (p) { return { nome: p.nome, colore: p.colore }; });
+          if (azione === 'aggiungiGiocatore') mockG.push({ nome: extra.nome, colore: extra.colore });
+          if (azione === 'eliminaGiocatore') mockG = mockG.filter(function (g) { return g.nome !== extra.nome; });
+          ok({
+            ok: true, giocatori: mockG,
+            dati: azione === 'dati' ? esempio() : undefined,
+            messaggio: azione === 'aggiungiGiocatore' ? 'Giocatore aggiunto: ' + extra.nome : azione === 'eliminaGiocatore' ? 'Giocatore eliminato: ' + extra.nome : 'Partita inserita (anteprima)'
+          });
         }, 400);
-      });
+      }).then(function (j) { impostaGiocatori(j.giocatori); return j; });
     }
     var corpo = { azione: azione };
     for (var k in extra) corpo[k] = extra[k];
@@ -362,6 +402,7 @@ select.btn{
       .then(function (j) {
         clearTimeout(timer);
         if (!j || j.ok === false) throw new Error((j && j.errore) || 'Errore sconosciuto');
+        impostaGiocatori(j.giocatori);            // elenco giocatori aggiornato dal foglio
         return j;
       }, function (err) {
         clearTimeout(timer);
@@ -372,6 +413,7 @@ select.btn{
 
   /* ===== navigazione ===== */
   function vai(id) {
+    if (id !== 'profili') modoElimina = false;
     var viste = document.querySelectorAll('.view');
     for (var i = 0; i < viste.length; i++) viste[i].classList.toggle('attiva', viste[i].id === id);
     window.scrollTo(0, 0);
@@ -413,15 +455,20 @@ select.btn{
   }
 
   function disegnaProfili() {
+    $('titoloProfili').textContent = modoElimina ? 'ELIMINA GIOCATORE' : 'CHI SEI?';
+    $('titoloProfili').style.color = modoElimina ? 'var(--rosso)' : '';
+    $('btnNuovoGiocatore').hidden = modoElimina;
+    $('btnEsciElimina').hidden = !modoElimina;
     $('listaProfili').innerHTML = PROFILI.map(function (p) {
-      var sel = profilo && profilo.id === p.id;
-      return '<button type="button" class="btn' + (sel ? ' scelto' : '') + '" data-id="' + p.id +
-             '" style="--sh:' + p.colore + '" aria-pressed="' + !!sel + '">' + esc(p.nome) + '</button>';
+      var sel = !modoElimina && profilo && profilo.id === p.id;
+      return '<button type="button" class="btn' + (sel ? ' scelto' : '') + (modoElimina ? ' da-eliminare' : '') + '" data-id="' + esc(p.id) + '"' +
+             (modoElimina ? '' : ' style="--sh:' + p.colore + '" aria-pressed="' + !!sel + '"') + '>' + esc(p.nome) + '</button>';
     }).join('');
   }
   $('listaProfili').addEventListener('click', function (e) {
     var b = e.target.closest('[data-id]');
     if (!b) return;
+    if (modoElimina) { apriElimina(b.getAttribute('data-id')); return; }
     for (var i = 0; i < PROFILI.length; i++) if (PROFILI[i].id === b.getAttribute('data-id')) profilo = PROFILI[i];
     scrivi('profilo', profilo.id);
     aggiornaAvatar();
@@ -438,6 +485,12 @@ select.btn{
   var visibili = {};
   PROFILI.forEach(function (p) { visibili[p.id] = true; });
 
+  /* Le partite dei giocatori eliminati restano nel foglio ma non compaiono più */
+  function attive() {
+    var n = {};
+    PROFILI.forEach(function (p) { n[p.nome] = 1; });
+    return DATI.filter(function (r) { return n[r.g]; });
+  }
   function filtra(righe, per) {
     return per === 'tutto' ? righe : righe.filter(function (r) { return r.d.slice(0, 7) === per; });
   }
@@ -470,6 +523,8 @@ select.btn{
     $('attesa').classList.remove('visibile');
   }
   function aggiornaTutto() {
+    aggiornaAvatar();
+    disegnaProfili();
     disegnaPodio();
     disegnaGiorno();
     if (Array.isArray(DATI)) disegnaPeriodi();
@@ -499,7 +554,7 @@ select.btn{
 
   function giorniConDati() {
     var g = [];
-    DATI.forEach(function (r) { if (g.indexOf(r.d) < 0) g.push(r.d); });
+    attive().forEach(function (r) { if (g.indexOf(r.d) < 0) g.push(r.d); });
     return g.sort();
   }
   function etichettaGiorno(d) {
@@ -547,7 +602,7 @@ select.btn{
   /* ----- classifica con filtro mensile ----- */
   function disegnaPeriodi() {
     var mesi = [];
-    DATI.forEach(function (r) { var m = r.d.slice(0, 7); if (mesi.indexOf(m) < 0) mesi.push(m); });
+    attive().forEach(function (r) { var m = r.d.slice(0, 7); if (mesi.indexOf(m) < 0) mesi.push(m); });
     mesi.sort().reverse();
     if (periodo !== 'tutto' && mesi.indexOf(periodo) < 0) periodo = 'tutto';
     $('periodo').innerHTML = '<option value="tutto">Generale</option>' +
@@ -572,7 +627,7 @@ select.btn{
   /* ----- andamento ----- */
   function disegnaChips() {
     $('chips').innerHTML = PROFILI.map(function (p) {
-      return '<button type="button" class="chip" data-id="' + p.id + '" style="--c:' + p.colore +
+      return '<button type="button" class="chip" data-id="' + esc(p.id) + '" style="--c:' + p.colore +
              '" aria-pressed="' + !!visibili[p.id] + '">' + esc(p.nome) + '</button>';
     }).join('');
   }
@@ -618,12 +673,12 @@ select.btn{
     var box = $('grafico');
     if (DATI === null) return stato(box, 'Caricamento...');
     if (DATI === 'errore') return stato(box, ERRORE);
-    if (!DATI.length) return stato(box, 'Ancora nessuna partita.');
+    if (!attive().length) return stato(box, 'Ancora nessuna partita.');
     var scelti = PROFILI.filter(function (p) { return visibili[p.id]; });
     if (!scelti.length) return stato(box, 'Scegli almeno un giocatore.');
 
     var W = 340, H = 230, ml = 44, mr = 14, mt = 12, mb = 30;
-    var tutti = DATI.map(function (r) { return giornoNum(r.d); });
+    var tutti = attive().map(function (r) { return giornoNum(r.d); });
     var x0 = Math.min.apply(null, tutti), x1 = Math.max.apply(null, tutti);
     if (x0 === x1) { x0 -= 1; x1 += 1; }
     var dati = scelti.map(function (p) { return { p: p, pts: serie(p) }; });
@@ -686,7 +741,7 @@ select.btn{
     var box = $('altriDati');
     if (DATI === null) return stato(box, 'Caricamento...');
     if (DATI === 'errore') return stato(box, ERRORE);
-    var h = '<div class="box"><div class="dato" style="border-top:0"><span>Partite totali del gruppo</span><b>' + DATI.length + '</b></div></div>';
+    var h = '<div class="box"><div class="dato" style="border-top:0"><span>Partite totali del gruppo</span><b>' + attive().length + '</b></div></div>';
     PROFILI.forEach(function (p) {
       var st = statistiche(p.nome);
       h += '<div class="box" style="--c:' + p.colore + '"><div class="scheda-testa"><i></i>' + esc(p.nome) + '</div>' +
@@ -739,6 +794,8 @@ select.btn{
   function chiudi() {
     $('velo').classList.remove('aperto');
     $('tendina').classList.remove('aperta');
+    $('tendinaGiocatore').classList.remove('aperta');
+    $('tendinaElimina').classList.remove('aperta');
     if (ultimoFocus && ultimoFocus.focus) ultimoFocus.focus({ preventScroll: true });
   }
   $('btnInserisci').addEventListener('click', apri);
@@ -807,12 +864,163 @@ select.btn{
       .then(function () { btn.disabled = false; btn.textContent = 'OK'; });
   });
 
+  /* ===== nuovo giocatore ===== */
+  var MAX_GIOCATORI = 12;
+  var REGEX_NOME = /^[\p{L}\p{N}][\p{L}\p{N} '.\-]{1,15}$/u;
+
+  /* L'elenco dei giocatori vive nel foglio (così è uguale su ogni dispositivo) */
+  function impostaGiocatori(lista) {
+    if (!Array.isArray(lista) || !lista.length) return;
+    PROFILI = lista.map(function (g) {
+      return { id: g.nome, nome: g.nome, colore: /^#[0-9a-f]{6}$/i.test(g.colore || '') ? g.colore : COLORE_NEUTRO };
+    });
+    PROFILI.forEach(function (p) { if (!(p.id in visibili)) visibili[p.id] = true; });
+    var salvato = leggi('profilo');
+    profilo = PROFILI.filter(function (p) { return p.id === salvato; })[0] || null;
+    scrivi('giocatori', JSON.stringify(lista));
+  }
+
+  /* Colore automatico: tra tanti candidati prendo quello più lontano (distanza CIELAB) dai colori già usati,
+     dal grigio "nessun profilo", dallo sfondo e dal testo, e con testo scuro ancora leggibile. */
+  function hslHex(h, s, l) {
+    var a = s * Math.min(l, 1 - l);
+    function f(n) { var k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); }
+    return '#' + [f(0), f(8), f(4)].map(function (v) { return (v < 16 ? '0' : '') + v.toString(16); }).join('').toUpperCase();
+  }
+  function lineare(hex, i) { var v = parseInt(hex.substr(i, 2), 16) / 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+  function luminanza(hex) { return 0.2126 * lineare(hex, 1) + 0.7152 * lineare(hex, 3) + 0.0722 * lineare(hex, 5); }
+  function hexLab(hex) {
+    var r = lineare(hex, 1), g = lineare(hex, 3), b = lineare(hex, 5);
+    var x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047, y = r * 0.2126 + g * 0.7152 + b * 0.0722, z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+    function t(v) { return v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116; }
+    return [116 * t(y) - 16, 500 * (t(x) - t(y)), 200 * (t(y) - t(z))];
+  }
+  function scegliColore(esistenti) {
+    var lab = esistenti.concat([COLORE_NEUTRO, '#FDF2D1', '#434343']).map(hexLab);
+    var lumTesto = luminanza('#434343'), migliore = '#72CE5B', max = -1;
+    [0.6, 0.8].forEach(function (sat) {
+      [0.58, 0.66, 0.74].forEach(function (luce) {
+        for (var h = 0; h < 360; h += 3) {
+          var hex = hslHex(h, sat, luce);
+          if ((luminanza(hex) + 0.05) / (lumTesto + 0.05) < 4.2) continue;   // testo scuro leggibile
+          var L = hexLab(hex), min = Infinity;
+          for (var i = 0; i < lab.length; i++) {
+            var d = Math.sqrt(Math.pow(L[0] - lab[i][0], 2) + Math.pow(L[1] - lab[i][1], 2) + Math.pow(L[2] - lab[i][2], 2));
+            if (d < min) min = d;
+          }
+          if (min > max) { max = min; migliore = hex; }
+        }
+      });
+    });
+    return migliore;
+  }
+
+  var coloreNuovo = COLORE_NEUTRO;
+  function apriGiocatore() {
+    ultimoFocus = document.activeElement;
+    coloreNuovo = scegliColore(PROFILI.map(function (p) { return p.colore; }));
+    $('icoNuovo').innerHTML = iconaSvg(coloreNuovo, 'ipn');
+    $('nomeNuovo').value = '';
+    $('velo').classList.add('aperto');
+    $('tendinaGiocatore').classList.add('aperta');
+    setTimeout(function () { $('nomeNuovo').focus({ preventScroll: true }); }, 300);
+  }
+  $('btnNuovoGiocatore').addEventListener('click', apriGiocatore);
+  $('nomeNuovo').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('btnAggiungi').click(); });
+  $('btnAggiungi').addEventListener('click', function () {
+    var btn = this;
+    var nome = $('nomeNuovo').value.replace(/\s+/g, ' ').trim();
+    if (!REGEX_NOME.test(nome)) { avviso('Nome non valido: da 2 a 16 caratteri, solo lettere, numeri, spazi, apostrofo, punto e trattino', 'err'); $('nomeNuovo').focus(); return; }
+    if (PROFILI.some(function (p) { return p.nome.toLowerCase() === nome.toLowerCase(); })) { avviso('Esiste già un giocatore con questo nome', 'err'); $('nomeNuovo').focus(); return; }
+    if (PROFILI.length >= MAX_GIOCATORI) { avviso('Hai raggiunto il massimo di ' + MAX_GIOCATORI + ' giocatori', 'err'); return; }
+
+    btn.disabled = true;
+    mostraAttesa('Aggiungo il giocatore...');
+    api('aggiungiGiocatore', { nome: nome, colore: coloreNuovo })
+      .then(function (j) {
+        chiudi();
+        nascondiAttesa();
+        aggiornaTutto();
+        avviso(typeof j.messaggio === 'string' && j.messaggio ? j.messaggio : 'Giocatore aggiunto: ' + nome, 'ok');
+      })
+      .catch(function (err) {
+        nascondiAttesa();
+        var msg = String(err && err.message ? err.message : err).replace(/^Error:\s*/, '');
+        if (err && err.name === 'TypeError') msg = 'Connessione non riuscita, riprova';
+        avviso(msg.length > 140 ? msg.slice(0, 140) + '…' : msg, 'err');
+      })
+      .then(function () { btn.disabled = false; });
+  });
+
+  /* ===== elimina giocatore (modalità nascosta) =====
+     Si attiva solo con una sequenza segreta, per non eliminare qualcuno per sbaglio:
+     - da tastiera: scrivere la parola SEQUENZA_TASTI mentre si è nella schermata dei profili
+     - da touch: toccare TOCCHI_TITOLO volte, di seguito e in fretta, il titolo "CHI SEI?" */
+  var SEQUENZA_TASTI = 'elimina';
+  var TOCCHI_TITOLO = 5;
+  var modoElimina = false, digitato = '', tocchi = [], daEliminare = null;
+
+  function attivaElimina() {
+    modoElimina = true;
+    disegnaProfili();
+    avviso('Modalità elimina attiva: tocca il giocatore da eliminare', 'err');
+  }
+  document.addEventListener('keydown', function (e) {
+    if (!$('profili').classList.contains('attiva') || modoElimina) return;
+    var tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || !e.key || e.key.length !== 1) return;
+    digitato = (digitato + e.key.toLowerCase()).slice(-SEQUENZA_TASTI.length);
+    if (digitato === SEQUENZA_TASTI) { digitato = ''; attivaElimina(); }
+  });
+  $('titoloProfili').addEventListener('click', function () {
+    if (modoElimina) return;
+    var ora = Date.now();
+    tocchi = tocchi.filter(function (t) { return ora - t < 2500; });
+    tocchi.push(ora);
+    if (tocchi.length >= TOCCHI_TITOLO) { tocchi = []; attivaElimina(); }
+  });
+  $('btnEsciElimina').addEventListener('click', function () { modoElimina = false; disegnaProfili(); });
+
+  function apriElimina(id) {
+    var p = PROFILI.filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+    if (PROFILI.length <= 1) { avviso('Deve restare almeno un giocatore', 'err'); return; }
+    daEliminare = p;
+    ultimoFocus = document.activeElement;
+    $('titoloElimina').textContent = 'Eliminare ' + p.nome + '?';
+    $('velo').classList.add('aperto');
+    $('tendinaElimina').classList.add('aperta');
+    setTimeout(function () { $('btnEliminaNo').focus({ preventScroll: true }); }, 300);   // il focus parte su ANNULLA
+  }
+  $('btnEliminaNo').addEventListener('click', chiudi);
+  $('btnEliminaOk').addEventListener('click', function () {
+    if (!daEliminare) return;
+    var btn = this, nome = daEliminare.nome;
+    btn.disabled = true;
+    mostraAttesa('Elimino il giocatore...');
+    api('eliminaGiocatore', { nome: nome })
+      .then(function (j) {
+        chiudi();
+        nascondiAttesa();
+        aggiornaTutto();
+        avviso(typeof j.messaggio === 'string' && j.messaggio ? j.messaggio : 'Giocatore eliminato: ' + nome, 'ok');
+      })
+      .catch(function (err) {
+        nascondiAttesa();
+        var msg = String(err && err.message ? err.message : err).replace(/^Error:\s*/, '');
+        if (err && err.name === 'TypeError') msg = 'Connessione non riuscita, riprova';
+        avviso(msg.length > 140 ? msg.slice(0, 140) + '…' : msg, 'err');
+      })
+      .then(function () { btn.disabled = false; daEliminare = null; });
+  });
+
   /* Quando si torna sulla pagina (cambio scheda, telefono sbloccato) aggiorno i dati senza ricaricare */
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden && !invioInCorso && Date.now() - ultimoAgg > 30000) caricaDati();
   });
 
   /* ===== avvio ===== */
+  try { impostaGiocatori(JSON.parse(leggi('giocatori'))); } catch (e) { /* nessun elenco salvato */ }
   aggiornaAvatar();
   aggiornaTutto();
   caricaDati();
