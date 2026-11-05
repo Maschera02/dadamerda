@@ -42,7 +42,15 @@ body{background:#fff;color:var(--grigio);font-family:var(--font);display:flex;ju
 .btn.mini{width:auto;min-width:120px;height:40px;margin:0;left:0;font-size:18px;padding:0 16px}
 
 /* ---------- home ---------- */
-.avatar{display:flex;flex-direction:column;align-items:center;width:71px;margin:75px 18px 0 auto;padding:0;border:0;background:none;color:var(--grigio);cursor:pointer}
+.testa{display:flex;justify-content:space-between;align-items:flex-start;width:min(331px,calc(100% - 59px));margin:75px auto 0}   /* 331 = pulsante 323 + ombra 8: stessi bordi dei pulsanti */
+.testa-dx{display:flex;align-items:flex-start;gap:16px}
+.streak{height:71px;display:flex;align-items:center}
+.fuoco{display:block;width:38px;height:57px}
+.fuoco text{font-family:var(--font);font-weight:700;fill:var(--grigio)}
+.pos-mese{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:62px;height:54px;margin-top:8px;padding:0 8px;background:var(--avorio);border:3px solid var(--grigio);box-shadow:5px 5px 0 var(--sh,var(--grigio))}
+.pos-mese b{font:700 22px/1 var(--font)}
+.pos-mese small{margin-top:2px;font:700 11px/1 var(--font);text-transform:uppercase}
+.avatar{display:flex;flex-direction:column;align-items:center;width:71px;margin:0;padding:0;border:0;background:none;color:var(--grigio);cursor:pointer}
 .avatar:focus-visible{outline:3px solid var(--grigio);outline-offset:4px}
 .avatar svg{display:block;width:71px;height:71px}
 .avatar .nome-profilo{margin-top:6px;font:700 14px/1 var(--font);white-space:nowrap}
@@ -85,7 +93,9 @@ select.btn{
 .lista-class{margin-top:30px}
 .nav-giorno{display:flex;align-items:center;justify-content:space-between;height:50px;padding:0 4px;margin-bottom:26px}
 .nav-giorno .freccia{width:46px;height:44px;font-size:26px}
-.nav-giorno .etichetta{font:700 18px/1 var(--font);text-align:center}
+.nav-giorno .etichetta{padding:10px 8px;border:0;background:none;color:var(--grigio);font:700 18px/1 var(--font);text-align:center;cursor:pointer}
+.nav-giorno .etichetta::after{content:' \25BE'}
+.nav-giorno .etichetta:focus-visible{outline:3px solid var(--grigio);outline-offset:2px}
 .gr{padding:11px 14px 13px;border-bottom:2px solid rgba(67,67,67,.2)}
 .gr:last-child{border-bottom:0}
 .gr-testa{display:grid;grid-template-columns:26px 16px 1fr auto;align-items:center;gap:10px;margin-bottom:10px}
@@ -131,6 +141,10 @@ select.btn{
 .dato b{font-weight:700;text-align:right;margin-left:auto}
 .dato small{font:600 13px/1 var(--font);opacity:.75}
 
+/* ---------- livello fisso: velo, tendine, caricamento e avvisi stanno sempre sullo schermo, anche nelle pagine lunghe ---------- */
+.strato{position:fixed;top:0;bottom:0;left:0;right:0;width:100%;max-width:430px;margin:0 auto;z-index:10;pointer-events:none}
+.strato>.velo,.strato>.tendina,.strato>.attesa{pointer-events:auto}
+
 /* ---------- tendina ---------- */
 .velo{position:absolute;inset:0;background:rgba(217,217,217,.65);opacity:0;visibility:hidden;transition:opacity .25s,visibility 0s .25s;z-index:10}
 .velo.aperto{opacity:1;visibility:visible;transition:opacity .25s}
@@ -156,7 +170,10 @@ select.btn{
 .cal-sett span{font:700 12px/20px var(--font);text-align:center}
 .cal-giorni{grid-auto-rows:25px}
 .g{border:2px solid transparent;background:none;font:600 15px/1 var(--font);color:var(--grigio);cursor:pointer;margin:0 1px}
+.g{position:relative}
 .g.oggi{text-decoration:underline}
+.g.cp{box-shadow:inset 0 -3px 0 var(--verde)}   /* giorno con partite: barretta verde in basso */
+.marcatori .g:not(.cp):not(.sel){opacity:.55}
 .g.sel{background:var(--verde);border-color:var(--grigio)}
 .g:disabled{opacity:.3;cursor:default}
 #btnOk,#btnAggiungi{--sh:var(--grigio);background:var(--verde);color:#fff;font-weight:800}
@@ -204,18 +221,24 @@ select.btn{
 
   <!-- ================= HOME ================= -->
   <section class="view attiva" id="home" aria-label="Home">
-    <button class="avatar" id="btnProfilo" type="button" aria-label="Scegli il profilo">
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <defs><clipPath id="tondo"><circle cx="32" cy="32" r="29"/></clipPath></defs>
-        <circle id="avatarFill" cx="32" cy="32" r="29.5" fill="#BCB9B1"/>
-        <g clip-path="url(#tondo)" fill="#FDF2D1">
-          <circle cx="32" cy="25" r="9"/>
-          <ellipse cx="32" cy="58" rx="19" ry="15"/>
-        </g>
-        <circle cx="32" cy="32" r="29.5" fill="none" stroke="#434343" stroke-width="5"/>
-      </svg>
-      <span class="nome-profilo" id="nomeProfilo">Scegli profilo</span>
-    </button>
+    <div class="testa">
+      <div class="streak" id="streak" role="img" aria-label="Streak: 0 giorni"></div>
+      <div class="testa-dx">
+        <div class="pos-mese" id="posMese" role="img" aria-label="Posizione nella classifica del mese: nessuna"><b id="posMeseNum">-</b><small>mese</small></div>
+        <button class="avatar" id="btnProfilo" type="button" aria-label="Scegli il profilo">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <defs><clipPath id="tondo"><circle cx="32" cy="32" r="29.3"/></clipPath></defs>
+            <circle id="avatarFill" cx="32" cy="32" r="30.65" fill="#BCB9B1"/>
+            <g clip-path="url(#tondo)" fill="#FDF2D1">
+              <circle cx="32" cy="25" r="9"/>
+              <ellipse cx="32" cy="58" rx="19" ry="15"/>
+            </g>
+            <circle cx="32" cy="32" r="30.65" fill="none" stroke="#434343" stroke-width="2.7"/>
+          </svg>
+          <span class="nome-profilo" id="nomeProfilo">Scegli profilo</span>
+        </button>
+      </div>
+    </div>
 
     <a class="btn farflung" style="--sh:var(--rosso)" id="btnFarflung" href="https://farflung.game" target="_blank" rel="noopener">FARFLUNG</a>
     <button class="btn partita" style="--sh:var(--verde)" id="btnInserisci" type="button">INSERISCI PARTITA</button>
@@ -248,7 +271,7 @@ select.btn{
     <h2 class="sottotitolo primo">GIORNALIERA</h2>
     <div class="box nav-giorno" id="navGiorno">
       <button class="freccia" id="giornoPrec" type="button" aria-label="Giorno precedente">&#8249;</button>
-      <span class="etichetta" id="giornoEtichetta" aria-live="polite">-</span>
+      <button class="etichetta" id="giornoEtichetta" type="button" aria-haspopup="dialog" title="Scegli il giorno">-</button>
       <button class="freccia" id="giornoSucc" type="button" aria-label="Giorno successivo">&#8250;</button>
     </div>
     <div class="box" id="listaGiorno" aria-live="polite"></div>
@@ -280,6 +303,7 @@ select.btn{
   </section>
 
   <!-- ================= TENDINA INSERISCI PARTITA ================= -->
+  <div class="strato">
   <div class="velo" id="velo"></div>
   <div class="tendina" id="tendina" role="dialog" aria-modal="true" aria-label="Inserisci partita">
     <div class="maniglia"></div>
@@ -297,6 +321,20 @@ select.btn{
     </div>
 
     <button class="btn" id="btnOk" type="button">OK</button>
+  </div>
+
+  <div class="tendina" id="tendinaGiorno" role="dialog" aria-modal="true" aria-label="Scegli il giorno da vedere">
+    <div class="maniglia"></div>
+    <div class="box cal marcatori" aria-label="Giorno da vedere">
+      <div class="cal-testa">
+        <button class="freccia" id="mesePrecG" type="button" aria-label="Mese precedente">&#8249;</button>
+        <span class="mese" id="titoloMeseG" aria-live="polite"></span>
+        <button class="freccia" id="meseSuccG" type="button" aria-label="Mese successivo">&#8250;</button>
+      </div>
+      <div class="cal-sett" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="cal-giorni" id="giorniG"></div>
+    </div>
+    <button class="btn" id="giornoOggi" type="button">OGGI</button>
   </div>
 
   <div class="tendina" id="tendinaGiocatore" role="dialog" aria-modal="true" aria-label="Nuovo giocatore">
@@ -321,6 +359,7 @@ select.btn{
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
 </div>
 
 <script>
@@ -442,16 +481,43 @@ select.btn{
   })();
 
   var COLORE_NEUTRO = '#BCB9B1';   // nessun profilo scelto
-  function iconaSvg(colore, id) {
-    return '<svg viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="' + id + '"><circle cx="32" cy="32" r="29"/></clipPath></defs>' +
-      '<circle cx="32" cy="32" r="29.5" fill="' + colore + '"/>' +
+  /* Icona profilo: il bordo è sempre di 3px, come quello dei pulsanti, qualunque sia la dimensione (px) */
+  function iconaSvg(colore, id, px) {
+    var sp = 3 * 64 / (px || 54), r = (32 - sp / 2).toFixed(2), rc = (32 - sp).toFixed(2);
+    return '<svg viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="' + id + '"><circle cx="32" cy="32" r="' + rc + '"/></clipPath></defs>' +
+      '<circle cx="32" cy="32" r="' + r + '" fill="' + colore + '"/>' +
       '<g clip-path="url(#' + id + ')" fill="#FDF2D1"><circle cx="32" cy="25" r="9"/><ellipse cx="32" cy="58" rx="19" ry="15"/></g>' +
-      '<circle cx="32" cy="32" r="29.5" fill="none" stroke="#434343" stroke-width="5"/></svg>';
+      '<circle cx="32" cy="32" r="' + r + '" fill="none" stroke="#434343" stroke-width="' + sp.toFixed(2) + '"/></svg>';
+  }
+
+  /* Fuoco dello streak: grigio a 0, poi sempre più caldo fino a 5 giorni, oltre resta uguale */
+  var FUOCO_COLORI = ['#BCB9B1', '#FFD84D', '#FFB020', '#FF8A1F', '#F2551C', '#D62718'];
+  function fuocoSvg(n) {
+    var st = Math.min(n, 5), cifre = String(n).length;
+    return '<svg class="fuoco" viewBox="5.5 1.5 37 57" aria-hidden="true">' +
+      '<path d="M24 3 C26 13 41 20 41 38 C41 50 34 57 24 57 C14 57 7 50 7 38 C7 30 11 24 15 20 C15 26 18 29 21 29 C18 21 19 11 24 3 Z" fill="' + FUOCO_COLORI[st] + '" stroke="#434343" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M24 27 C26 34 33 37 33 44 C33 50 29 54 24 54 C19 54 15 50 15 44 C15 38 20 34 24 27 Z" fill="' + (st ? '#FFF4C7' : '#E9E6DC') + '"/>' +
+      '<text x="24" y="' + (cifre > 1 ? 48.5 : 49) + '" text-anchor="middle" font-size="' + (cifre > 2 ? 11 : cifre > 1 ? 14 : 18) + '">' + n + '</text></svg>';
+  }
+  /* Riga in alto: streak attuale e posizione del profilo nella classifica del mese in corso */
+  function disegnaTesta() {
+    var st = 0, pos = '-';
+    if (Array.isArray(DATI) && profilo) {
+      st = statistiche(profilo.nome).attuale;
+      var c = classifica(filtra(attive(), oggi.slice(0, 7)));
+      for (var i = 0; i < c.length; i++) if (c[i].p.id === profilo.id && c[i].n) pos = (i + 1) + '°';
+    }
+    $('streak').innerHTML = fuocoSvg(st);
+    $('streak').setAttribute('aria-label', 'Streak: ' + st + (st === 1 ? ' giorno' : ' giorni'));
+    $('posMeseNum').textContent = pos;
+    $('posMese').style.setProperty('--sh', profilo ? profilo.colore : COLORE_NEUTRO);
+    $('posMese').setAttribute('aria-label', 'Posizione nella classifica del mese: ' + (pos === '-' ? 'nessuna' : pos));
   }
   function aggiornaAvatar() {
     $('avatarFill').setAttribute('fill', profilo ? profilo.colore : COLORE_NEUTRO);
     $('nomeProfilo').textContent = profilo ? profilo.nome : 'Scegli profilo';
     $('btnProfilo').setAttribute('aria-label', profilo ? 'Profilo: ' + profilo.nome + ' (cambia)' : 'Scegli il profilo');
+    disegnaTesta();
   }
 
   function disegnaProfili() {
@@ -541,7 +607,7 @@ select.btn{
     var c = Array.isArray(DATI) ? classifica(DATI) : [];
     for (var i = 1; i <= 3; i++) {
       var r = c[i - 1] && c[i - 1].n ? c[i - 1] : null;
-      $('ico' + i).innerHTML = iconaSvg(r ? r.p.colore : COLORE_NEUTRO, 'ip' + i);
+      $('ico' + i).innerHTML = iconaSvg(r ? r.p.colore : COLORE_NEUTRO, 'ip' + i, 54);
       $('nome' + i).textContent = r ? r.p.nome : '-';
       $('pt' + i).textContent = r ? r.km : '-';
     }
@@ -571,16 +637,16 @@ select.btn{
     if (DATI === 'errore') { et.textContent = '-'; return stato(box, ERRORE); }
     var giorni = giorniConDati();
     if (!giorni.length) { et.textContent = '-'; return stato(box, 'Ancora nessuna partita.'); }
-    if (giorni.indexOf(giorno) < 0) giorno = giorni[giorni.length - 1];   // di default l'ultimo giorno con partite
-    var i = giorni.indexOf(giorno);
+    if (!giorno) giorno = giorni[giorni.length - 1];   // di default l'ultimo giorno con partite
     et.textContent = etichettaGiorno(giorno);
-    pr.disabled = i === 0;
-    su.disabled = i === giorni.length - 1;
+    pr.disabled = !giorni.some(function (g) { return g < giorno; });   // le frecce saltano ai giorni con partite
+    su.disabled = !giorni.some(function (g) { return g > giorno; });
 
     var colori = {};
     PROFILI.forEach(function (p) { colori[p.nome] = p.colore; });
     var righe = DATI.filter(function (r) { return r.d === giorno && colori[r.g]; })
       .sort(function (a, b) { return b.t - a.t; });
+    if (!righe.length) { box.innerHTML = '<div class="vuoto">Nessuna partita in questa giornata.</div>'; return; }
     box.innerHTML = righe.map(function (r, k) {
       var tile = (r.c || []).map(function (c, q) {
         var n = String(c); n = n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
@@ -591,13 +657,14 @@ select.btn{
     }).join('');
   }
   $('giornoPrec').addEventListener('click', function () {
-    var g = giorniConDati(), i = g.indexOf(giorno);
-    if (i > 0) { giorno = g[i - 1]; disegnaGiorno(); }
+    var prima = giorniConDati().filter(function (g) { return g < giorno; });
+    if (prima.length) { giorno = prima[prima.length - 1]; disegnaGiorno(); }
   });
   $('giornoSucc').addEventListener('click', function () {
-    var g = giorniConDati(), i = g.indexOf(giorno);
-    if (i >= 0 && i < g.length - 1) { giorno = g[i + 1]; disegnaGiorno(); }
+    var dopo = giorniConDati().filter(function (g) { return g > giorno; });
+    if (dopo.length) { giorno = dopo[0]; disegnaGiorno(); }
   });
+  $('giornoEtichetta').addEventListener('click', function () { apriGiorno(); });
 
   /* ----- classifica con filtro mensile ----- */
   function disegnaPeriodi() {
@@ -755,38 +822,50 @@ select.btn{
   /* ===== calendario ===== */
   var adesso = new Date();
   var oggi = iso(adesso.getFullYear(), adesso.getMonth(), adesso.getDate());
-  var dataSel = oggi;
-  var vistaY = adesso.getFullYear(), vistaM = adesso.getMonth();
 
-  function disegnaCal() {
-    $('titoloMese').textContent = MESI[vistaM] + ' ' + vistaY;
-    var primo = (new Date(vistaY, vistaM, 1).getDay() + 6) % 7;      // lunedì = 0
-    var n = new Date(vistaY, vistaM + 1, 0).getDate();
-    var h = '';
-    for (var i = 0; i < primo; i++) h += '<span></span>';
-    for (var d = 1; d <= n; d++) {
-      var s = iso(vistaY, vistaM, d);
-      h += '<button type="button" class="g' + (s === dataSel ? ' sel' : '') + (s === oggi ? ' oggi' : '') +
-           '" data-d="' + s + '"' + (s > oggi ? ' disabled' : '') + (s === dataSel ? ' aria-pressed="true"' : '') + '>' + d + '</button>';
-    }
-    $('giorni').innerHTML = h;
-    $('meseSucc').disabled = vistaY * 12 + vistaM >= adesso.getFullYear() * 12 + adesso.getMonth();
+  /* Calendario riusabile: serve sia per inserire una partita sia per scegliere il giorno da vedere */
+  function creaCalendario(ids, allaSelezione) {
+    var c = { y: adesso.getFullYear(), m: adesso.getMonth(), sel: oggi, conDati: null };
+    var gr = $(ids.giorni), tit = $(ids.titolo), prec = $(ids.prec), succ = $(ids.succ);
+    c.disegna = function () {
+      tit.textContent = MESI[c.m] + ' ' + c.y;
+      var primo = (new Date(c.y, c.m, 1).getDay() + 6) % 7;      // lunedì = 0
+      var n = new Date(c.y, c.m + 1, 0).getDate(), h = '';
+      for (var i = 0; i < primo; i++) h += '<span></span>';
+      for (var d = 1; d <= n; d++) {
+        var s = iso(c.y, c.m, d);
+        h += '<button type="button" class="g' + (s === c.sel ? ' sel' : '') + (s === oggi ? ' oggi' : '') + (c.conDati && c.conDati[s] ? ' cp' : '') +
+             '" data-d="' + s + '"' + (s > oggi ? ' disabled' : '') + (s === c.sel ? ' aria-pressed="true"' : '') + '>' + d + '</button>';
+      }
+      gr.innerHTML = h;
+      succ.disabled = c.y * 12 + c.m >= adesso.getFullYear() * 12 + adesso.getMonth();
+    };
+    c.vai = function (data) {
+      var a = data.split('-');
+      c.sel = data; c.y = +a[0]; c.m = +a[1] - 1;
+      c.disegna();
+    };
+    gr.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-d]');
+      if (!b || b.disabled) return;
+      c.sel = b.getAttribute('data-d');
+      c.disegna();
+      if (allaSelezione) allaSelezione(c.sel);
+    });
+    prec.addEventListener('click', function () { c.m--; if (c.m < 0) { c.m = 11; c.y--; } c.disegna(); });
+    succ.addEventListener('click', function () { c.m++; if (c.m > 11) { c.m = 0; c.y++; } c.disegna(); });
+    return c;
   }
-  $('giorni').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-d]');
-    if (!b || b.disabled) return;
-    dataSel = b.getAttribute('data-d');
-    disegnaCal();
+  var calIns = creaCalendario({ giorni: 'giorni', titolo: 'titoloMese', prec: 'mesePrec', succ: 'meseSucc' });
+  var calGiorno = creaCalendario({ giorni: 'giorniG', titolo: 'titoloMeseG', prec: 'mesePrecG', succ: 'meseSuccG' }, function (d) {
+    giorno = d; chiudi(); disegnaGiorno();           // scelto il giorno: si chiude e si mostra subito
   });
-  $('mesePrec').addEventListener('click', function () { vistaM--; if (vistaM < 0) { vistaM = 11; vistaY--; } disegnaCal(); });
-  $('meseSucc').addEventListener('click', function () { vistaM++; if (vistaM > 11) { vistaM = 0; vistaY++; } disegnaCal(); });
 
   /* ===== tendina ===== */
   var ultimoFocus = null;
   function apri() {
     ultimoFocus = document.activeElement;
-    dataSel = oggi; vistaY = adesso.getFullYear(); vistaM = adesso.getMonth();
-    disegnaCal();
+    calIns.vai(oggi);
     $('velo').classList.add('aperto');
     $('tendina').classList.add('aperta');
     setTimeout(function () { $('btnOk').focus({ preventScroll: true }); }, 300);
@@ -796,8 +875,21 @@ select.btn{
     $('tendina').classList.remove('aperta');
     $('tendinaGiocatore').classList.remove('aperta');
     $('tendinaElimina').classList.remove('aperta');
+    $('tendinaGiorno').classList.remove('aperta');
     if (ultimoFocus && ultimoFocus.focus) ultimoFocus.focus({ preventScroll: true });
   }
+  function apriGiorno() {
+    if (!Array.isArray(DATI)) return;
+    var m = {};
+    giorniConDati().forEach(function (g) { m[g] = true; });
+    calGiorno.conDati = m;                      // i giorni con partite hanno una barretta verde
+    calGiorno.vai(giorno || oggi);
+    ultimoFocus = document.activeElement;
+    $('velo').classList.add('aperto');
+    $('tendinaGiorno').classList.add('aperta');
+    setTimeout(function () { var sel = $('giorniG').querySelector('.sel'); if (sel) sel.focus({ preventScroll: true }); }, 300);
+  }
+  $('giornoOggi').addEventListener('click', function () { giorno = oggi; chiudi(); disegnaGiorno(); });
   $('btnInserisci').addEventListener('click', apri);
   $('velo').addEventListener('click', chiudi);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') chiudi(); });
@@ -838,11 +930,11 @@ select.btn{
     var esito = '';
     btn.disabled = true; btn.textContent = 'INVIO...';
     mostraAttesa('Invio in corso...');
-    api('invia', { giocatore: profilo.nome, link: testo, data: dataSel })
+    api('invia', { giocatore: profilo.nome, link: testo, data: calIns.sel })
       .then(function (j) {
         esito = typeof j.messaggio === 'string' && j.messaggio ? j.messaggio : 'Partita inserita';
         testo = ''; $('link').value = '';
-        giorno = dataSel;
+        giorno = calIns.sel;
         if (Array.isArray(j.dati)) {                 // il server ha già rimandato i dati aggiornati
           DATI = j.dati; ultimoAgg = Date.now(); aggiornaTutto();
           return;
@@ -919,7 +1011,7 @@ select.btn{
   function apriGiocatore() {
     ultimoFocus = document.activeElement;
     coloreNuovo = scegliColore(PROFILI.map(function (p) { return p.colore; }));
-    $('icoNuovo').innerHTML = iconaSvg(coloreNuovo, 'ipn');
+    $('icoNuovo').innerHTML = iconaSvg(coloreNuovo, 'ipn', 52);
     $('nomeNuovo').value = '';
     $('velo').classList.add('aperto');
     $('tendinaGiocatore').classList.add('aperta');
